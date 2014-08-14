@@ -1,0 +1,45 @@
+$ /Applications/MAMP/bin/php/php5.2.17/bin/php -f idl_php_test.php
+begin!
+
+Testing idlphp_setmainstringvar...
+String value = my test string.
+string(7) "res = 1"
+string(21) "var = my test string."
+
+Testing idlphp_setmainlongvar...
+Long value = 999
+string(7) "res = 1"
+Returning long
+string(9) "var = 999"
+
+Testing idlphp_setmaindoublevar...
+Double value = 999.000000
+string(7) "res = 1"
+IDL_RPCGetMainVariable: Error getting variable
+string(7) "var = 0"
+
+Testing idlphp_setmainstringarray...
+string(7) "res = 1"
+Returning string array as string array
+element length = 16
+number of elements = 4
+string(11) "var = Array"
+
+Testing idlphp_setmainlongarray...
+string(7) "res = 1"
+Returning int array as long array
+string(11) "var = Array"
+
+Testing idlphp_setmaindoublearray...
+zend_hash_get_current_key_type(ht) = 2
+The array contains 6 elements
+Converted to double 222.200000
+Converted to double 6.660000
+Converted to double 11.000000
+Converted to double 33.330000
+Converted to double 1.500000
+Converted to double 7.700000
+string(7) "res = 0"
+Returning double as double array
+string(11) "var = Array"
+

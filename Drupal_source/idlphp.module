@@ -1,0 +1,354 @@
+<?php
+/*
+ * IDL_PHP_Bridge Copyright (C) 2014  New Media Studio, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY * without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+/**
+ * @file
+ * Implements IDL_RPC functionality in Drupal. 
+ */
+
+/*
+ * Impements hook_help().
+ */
+function idlphp_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#idlphp': {
+      $ret_val = '<h3>' . t('About') . '</h3>';
+      $ret_val = '<p>' . t('The IDLPHP module makes it possible to use IDL_RPC in Drupal') . '</p>';
+      return $ret_val;
+      break;
+    }
+  }
+}
+
+
+/**
+ * Implements hook_permission().
+ */
+function idlphp_permission() {
+  return array(
+    'administer idlphp' => array(
+      'title' => t('Administer IDL PHP'),
+      'description' => t('Perform administrative tasks on IDL PHP functionality'),
+    ),
+  );
+}
+
+
+/**
+ * Implements hook_menu().
+ */
+  
+function idlphp_menu() {
+  $items = array();
+   
+  // Admin configuration group.
+  $items['admin/config/idlphp'] = array(
+    'title' => 'IDL PHP',
+    'description' => 'Administer IDL PHP',
+    'access arguments' => array('administer idlphp'),
+  );
+  
+  // Admin configuration - Settings.
+  $items['admin/config/idlphp/manage'] = array(
+    'title' => 'IDL PHP settings',
+    'description' => 'Manage IDL PHP settings and configuration.',
+    'access arguments' => array('administer idlphp'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('idlphp_admin_settings_form'),
+  );
+  
+  // CHIRPS node.
+  $items['idlphp_chirps'] = array(
+    'title' => 'View CHIRPS Data',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('idlphp_chirps_form'),
+    'access callback' => TRUE,
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+ }
+
+
+/**
+ * Implements hook_form().
+ */
+function idlphp_admin_settings_form($node, &$form_state) {
+  $form = array();
+
+  $form['overview'] = array(
+    '#markup' => t('This interface allows administrators to manage general IDL PHP Settings'),
+    '#prefix' => '<p>',
+    '#suffix' => '</p>',
+  );
+
+  $form['idlphp_data_dir'] = array(
+    '#title' => t('Default data file'),
+    '#description' => t('Location of the data directory.'),
+    '#type' => 'textfield',
+    '#size' => 250,
+    '#required' => TRUE,
+    '#default_value' => variable_get('idlphp_data_dir', ''),
+  );
+
+  $form['idl_lib_path'] = array(
+    '#title' => t('Path to IDL dynamic libraries'),
+    '#description' => t('Location of the IDL shared libraries.'),
+    '#type' => 'textfield',
+    '#size' => 250,
+    '#required' => TRUE,
+    '#default_value' => variable_get('idl_lib_path',''),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    'title' => 'Data provided by: Aviso.oceanobs.com',
+
+  );
+
+  return $form;
+}
+
+
+/**
+ * Validates IDL PHP admin settings.
+ */
+function idlphp_admin_settings_form_validate($form, &$form_state) {
+  //dpm($form_state['values']);
+  //dpm($form_state);
+  
+  if(!file_exists($form_state['values']['idlphp_data_dir'])) {
+    form_set_error('idlphp_data_dir', t('Data directory does not exist.'));
+  }
+  
+  if(!file_exists($form_state['values']['idl_lib_path'])) {
+    form_set_error('idl_lib_path', t('IDL dynamic library directory does not exist.'));
+  }
+    
+}
+
+/*
+ * Process a validated IDL PHP admin setting submission.
+ */
+function idlphp_admin_settings_form_submit($form, &$form_state) {
+  // Rebuild the form.
+  $form_state['rebuild'] = TRUE;
+  
+  // Save the IDL PHP default variables.
+  variable_set('idlphp_data_dir', $form_state['values']['idlphp_data_dir']);
+  variable_set('idl_lib_path', $form_state['values']['idl_lib_path']);
+
+
+  // Notify admin user.
+  drupal_set_message(t('IDL PHP settings saved.'));
+}
+
+
+/**
+ * Implements hook_form_alter().
+ */
+function idlphp_form_alter(&$form, &$form_state, $form_id) {
+  switch ($form_id) {
+    case 'idlphp_node_form':{
+      $form['#validate'][] = 'idlphps_idlphp_node_form_validate';
+      break;
+    }
+  }
+}
+
+
+/**
+ * Validates IDL PHP content type.
+ */
+function idlphps_idlphp_node_form_validate($form, &$form_state) {
+  
+  // Validate data directory.
+  if(!file_exists($form_state['values']['idlphp_data_dir'])) {
+    form_set_error('idlphp_data_dir', t('Data directory does not exist.'));
+  }
+  
+  // Validate IDL library path.
+  if(!file_exists($form_state['values']['idl_lib_path'])) {
+    form_set_error('idl_lib_path', t('IDL dynamic library directory does not exist.'));
+  }
+ 
+}
+
+/**     
+ * Define a form.
+ */
+function idlphp_chirps_form($form = array(), &$form_state) {
+
+  $path = 'http://localhost:8888/TNMS/sites/default/files/chirps.2012.1.0.0.png';
+
+  $form['years'] = array(
+    '#type' => 'value',
+    '#value' => array(t('2012'), t('2011'), t('2010')),
+  );
+  $form['months'] = array(
+    '#type' => 'value',
+    '#value' => array(t('January'), t('February'), t('March'), t('April'), 
+      t('May'), t('June'), t('July'), t('August'), t('September'), 
+      t('October'), t('November'), t('December')),
+  );
+  $form['year'] = array(
+    '#title' => t('Year:'),
+    '#type' => 'select',
+    '#options' => $form['years']['#value'],
+    '#ajax' => array(
+      'callback' => 'ajax_chirps_img_callback', 
+      'wrapper' => 'chirps_img-div',
+      'method' => 'replace',
+    ) 
+  );
+  $form['month'] = array(
+    '#title' => t('Month:'),
+    '#type' => 'select',
+    '#options' => $form['months']['#value'],
+    '#ajax' => array(
+      'callback' => 'ajax_chirps_img_callback', 
+      'wrapper' => 'chirps_img-div',
+      'method' => 'replace',
+    ) 
+  );
+  $form['cluts'] = array(
+    '#type' => 'value',
+    '#value' => array(
+      t('0 - Black/White'), 
+      t('1 - Blue/White'), 
+      t('2 - White/Blue'),
+      t('3 - Red Temperature'), 
+      t('4 - White/Green'), 
+      t('5 - Rainbow'),
+      t('6 - Rainbow 18 steps'), 
+      t('7 - Red/Blue Anomaly')), 
+  );
+
+  $form['modes'] = array(
+    '#type' => 'value',
+    '#value' => array(t('Total Precipitation'), t('Monthly Mean'), t('Monthly Anomaly'))
+  );
+  
+  if (!empty($form_state['values'])) {
+
+    $i_year = $form_state['values']['year'];
+    $year = $form_state['values']['years'][$i_year];
+    $i_month = $form_state['values']['month'];
+    $month = $i_month + 1;
+    $mode = $form_state['values']['mode'];
+    $idlphp_clut = $form_state['values']['idlphp_clut'];
+    
+    $img_id = $year.'.'.$month.'.'.$idlphp_clut.'.'.$mode;
+    $args   =   $year.','.$month.','.$idlphp_clut.','.$mode;
+    
+    $command = 'path=display_chirps(' . $args . ')';
+    
+    //drupal_set_message(t($command));
+
+    // resolve_routine for debugging
+    $res = idlphp_executestr('resolve_routine, "display_chirps", /is_function');
+
+    //$res = idlphp_executestr('ii = indgen(5)');
+    //$res = idlphp_executestr('help, ii');
+    //$ii = idlphp_getmainvariable('ii');
+    //drupal_set_message(t('ii = ' . $ii));
+
+    $res = idlphp_executestr($command);
+    $res = idlphp_executestr('help, path');
+    $path = idlphp_getmainvariable("path");
+    drupal_set_message(t('path = ' . $path));
+    //dpm($form_state);
+    
+  }
+  
+  $form['idlphp_clut'] = array(
+    '#title' => t('Color Lookup Table'),
+    '#type' => 'select',
+    '#options' => $form['cluts']['#value'],
+    '#default_value' => isset($idlphp_clut) ? $idlphp_clut : 1,
+    '#ajax' => array(
+      'callback' => 'ajax_chirps_img_callback', 
+      'wrapper' => 'chirps_img-div',
+      'method' => 'replace',
+    ) 
+  );
+  //drupal_set_message(t('img_id = ' . $img_id));
+
+  $form['mode'] = array(
+    '#title' => t('Mode:'),
+    '#type' => 'select',
+    '#options' => $form['modes']['#value'],
+    '#ajax' => array(
+      'callback' => 'ajax_chirps_img_callback', 
+      'wrapper' => 'chirps_img-div',
+      'method' => 'replace',
+    ) 
+  );
+  
+  $form['data_image'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div id="chirps_img-div">',
+    '#suffix' => '</div>', 
+    //* markup for IDL
+    '#markup' => '<p><img src=" ' . $path . ' "style="width:720px;height:400px;"/> </p>',
+  );
+    
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('View Data'),
+  );
+
+  //dpm($form_state);
+  return $form;
+}
+
+/*
+ * Process the ajax callback
+ */
+function ajax_chirps_img_callback($form, $form_state) {
+  return $form['data_image'];
+}
+
+/**
+ * Implements idlphp_execute_string() to test IDL not currently used.
+ */
+function idlphp_execute_string(&$form, &$form_state, $form_id) {
+  
+  $res = idlphp_executestr("var = 123");
+	//$res = idlphp_executestr("display_chirps, 2010, 1");
+	//idlphp_executestr("help");
+  $data_dir = $form_state['values']['idlphp_data_dir'];
+	$image = file_get_contents('/Users/Marty/Projects/NSODC/Docs/Poster images/ESIP Poster/CHIRPS.2010.01.png');
+	$file = file_save_data($image, 'public://CHIRPS.2010.01.png', FILE_EXISTS_REPLACE);
+	$node = new stdClass;
+	$node->type = 'article';
+	node_object_prepare($node);
+	$node->title = 'CHIRPS 2010/01';
+	$node->language = LANGUAGE_NONE;
+	$node->body[LANGUAGE_NONE]['0']['value'] = 'New global precipitation product!';
+	$node->field_image[LANGUAGE_NONE]['0']['fid'] = $file->fid;
+	node_save($node);
+	
+	$form['idlphp_display_form_id'] = array(
+  	'#type' => 'item',
+		'#title' => t('IDL result = '.$res),
+		'#markup' => $form_id,
+		'#weight' => -100,
+		);
+}

@@ -1,0 +1,138 @@
+<?php
+/*
+ * IDL_PHP_Bridge Copyright (C) 2014  New Media Studio, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY * without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+/**
+ * @file
+ * IDP PHP installation
+ */
+
+/**
+ * Implements idlphp install.
+ */
+function idlphp_install() {
+  // Get localization funcation for installation as t() may be unavailable.
+  $t = get_t();
+  
+  $content_type = array(
+    'type' => 'idlphp_data_win',
+    'name' => $t('IDL PHP data window content type.'),
+    'description' => $t('An IDL PHP data window.'),
+    'title_label' => $t('Title'),
+    'base' => 'node_content',
+    'custom' => TRUE,
+  );
+  
+  // Set remaining definitions with defaults.
+  $node_type = node_type_set_defaults($content_type);
+  
+  // Save the content type
+  node_type_save($node_type);
+  
+  node_add_body_field($node_type, t('Description'));
+  
+  // Create fields.
+  $fields = array();
+  
+  $fields['idlphp_data_win_date'] = array(
+    'field_name' => 'idlphp_data_win_date',
+    'type' => 'text',
+    // Optional.
+    'cardinality' => 1,
+    'settings' => array(
+      'max_length' => 10,
+    ),
+  );
+  
+  $options = range(0, 15, 1);
+  $options[0] = t('0 - B-W linear');
+  $options[1] = t('1 - Blue/White');
+  $options[2] = t('2 - Grn-Red_Blue-White');
+  $options[3] = t('3 - Red Temperature');
+  $options[4] = t('4 - Blue/Green/Red/Yellow');
+  $options[5] = t('5 - Std. Gamma II');
+  $options[6] = t('6 - Prism');
+  $options[7] = t('7 - Red/Purple');
+  $options[8] = t('8 - Green/White Linear');
+  $options[9] = t('9 - Green/White Exponential');
+  $options[10] = t('10 - Green/Pink');
+  $options[11] = t('11 - Blue/Red');
+  $options[12] = t('12 - 16 Level');
+  $options[13] = t('13 - Rainbow');
+  $options[14] = t('14 - Steps');
+  $options[15] = t('15 - Stern Special');
+
+  $fields['idlphp_data_win_clut'] = array(
+    'field_name' => 'idlphp_data_win_clut',
+    'type' => 'text',
+    'options' => $options,
+    'cardinality' => 1,
+    'settings' => array(
+      'max_length' => 30,
+    ),
+  );  
+  
+  foreach ($fields as $field) {
+    field_create_field($field);
+  }
+
+  // Create Field Instances.
+  $instances = array();
+
+  $instances['idlphp_data_win_date'] = array(
+    'field_name' => 'idlphp_data_win_date',
+    'label' => $t('Date for data field'),
+    'description' => $t('The date of the data to be displayed.'),
+    'widget' => array(
+      'type' => 'text_textfield',
+    ),
+    'required' => TRUE,
+    'settings' => array(
+      'text_processing' => 0,
+    ),
+  );
+
+  $instances['idlphp_data_win_clut'] = array(
+    'field_name' => 'idlphp_data_win_clut',
+    'label' => $t('CLUT for data field'),
+    'description' => $t('The color lookup table of the data to be displayed.'),
+    'widget' => array(
+      'type' => 'options_select',
+    ),
+    'required' => TRUE,
+    'settings' => array(
+      'text_processing' => 0,
+    ),
+  );
+  
+  foreach ($instances as $instance) {
+    $instance['entity_type'] = 'node';
+    $instance['bundle'] = 'idlphp_data_win';
+    field_create_instance($instance);
+  }
+} 
+
+/**
+ * Implements idlphp uninstall.
+ */
+function idlphp_uninstall() {
+  // Delete variables.
+  variable_del('idlphp_data_dir');
+  variable_del('idl_lib_path');
+  variable_del('idlphp_clut');
+  variable_del('idlphp_data_date');
+}
